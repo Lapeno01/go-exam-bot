@@ -129,7 +129,20 @@ func timeLeft(s *discordgo.Session, m *discordgo.MessageCreate, name string) {
 		return
 	}
 
-	duration := time.Until(exam.Date)
+	// Load Germany timezone
+	loc, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to load Europe/Berlin timezone")
+		if time.Now().UTC().IsDST() {
+			loc = time.FixedZone("CEST", 2*60*60) // UTC+2 (Summer)
+		} else {
+			loc = time.FixedZone("CET", 1*60*60) // UTC+1 (Winter)
+		}
+	}
+
+	now := time.Now().In(loc)
+	examDate := exam.Date.In(loc)
+	duration := examDate.Sub(now)
 	if duration < 0 {
 		logger.Info().Str("exam", name).Msg("Exam has passed")
 		_, err := s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Exam %s has already passed", name))
